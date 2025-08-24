@@ -39,3 +39,7 @@ func init() {
 
 	fmt.Println("Successfully connected to the database")
 }
+
+func EnvValue(env_varibale string) (string) {
+	return os.Getenv(env_varibale)
+}
