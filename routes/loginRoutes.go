@@ -7,4 +7,5 @@ import (
 
 func LoginRoutes(router *gin.Engine){
 	router.POST("/login", controllers.Login);
+	router.PATCH("/verify/otp", controllers.VerifyOtp);
 }

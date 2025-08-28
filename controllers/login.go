@@ -26,7 +26,7 @@ func ComparePasswords(hashed_password string, plain_password string) (bool, erro
 // NOTE :
 // RAW is used for select queries and it won't run for update delete or insert
 // But it does run in users.go for insert because =>  Raw is designed for SELECT queries, but in PostgreSQL, INSERT ... RETURNING acts like a SELECT by returning rows.
-// GORM’s Raw can scan the returned value (e.g., id) into a variable, just like a SELECT. 
+// GORM’s Raw can scan the returned value (e.g., id) into a variable, just like a SELECT.
 func Login(ctx *gin.Context) {
 	var req_body LoginPayload
 
@@ -53,6 +53,11 @@ func Login(ctx *gin.Context) {
 			"error":   "",
 		})
 		return
+	} else if db_user.HashedPassword == "" {
+		ctx.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"error":   "You must set up your password before logging in.",
+		})
 	}
 
 	same_password, err := ComparePasswords(db_user.HashedPassword, req_body.UserDetails.Password)
@@ -127,6 +132,48 @@ func Login(ctx *gin.Context) {
 			"refresh_token": refresh_token,
 		})
 	}
+}
+
+func VerifyOtp(ctx *gin.Context) {
+	type Payload struct {
+		Otp      int    `json:"otp" binding:"required"`
+		TempCode string `json:"temp_code" binding:"required"`
+	}
+
+	var req_body Payload
+	if err := ctx.BindJSON(&req_body); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	var db_user models.User
+	query := "select id from auth_users where otp = $1, temp_code = $2"
+	if err := config.DB.Raw(query, req_body.Otp, req_body.TempCode).Scan(&db_user).Error; err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	user_code := generateTempCode()
+	query = "update auth_users set user_code = $1 where id = $2"
+	result := config.DB.Exec(query, user_code, db_user.ID)
+	if result.Error != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   result.Error.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"user_code": user_code,
+	})
 }
 
 // HELPER FUNCTIONS

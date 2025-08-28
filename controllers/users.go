@@ -76,3 +76,5 @@ func RegisterUser(ctx *gin.Context) {
 	})
 
 }
+
+
