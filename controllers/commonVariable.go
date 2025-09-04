@@ -6,7 +6,8 @@ type User struct {
 }
 
 type LoginPayload struct {
-	UserDetails     User           `json:"user_details"`
+	Email           string         `json:"email" binding:"required,email"`
+	Password        string         `json:"password"`
 	TempCode        string         `json:"temp_code"`
 	ApplicationName string         `json:"application_name" binding:"required"`
 	AccessPayload   map[string]any `json:"access_payload" binding:"required"`
