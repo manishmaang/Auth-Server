@@ -3,7 +3,6 @@ package controllers
 import (
 	"log"
 	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/manishmaang/auth-server/config"
 	"golang.org/x/crypto/bcrypt"
@@ -77,4 +76,41 @@ func RegisterUser(ctx *gin.Context) {
 
 }
 
+func UpdatePassword(ctx *gin.Context) {
+	var req_body User
+	if err := ctx.BindJSON(&req_body); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
 
+	hashed_password, err := HashString(req_body.Password)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   err.Error(),
+			"success": false,
+		})
+		return
+	}
+	query := "update auth_user set hashed_password = $1 where email = $2";
+
+	result := config.DB.Exec(query, hashed_password, req_body.Email)
+	if result.Error != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   result.Error.Error(),
+			"success": false,
+		})
+	}else if result.RowsAffected == 0 {
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"message": "User not found",
+		})
+	} else {
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"message": "Password updated successfully",
+		})
+	}
+}
